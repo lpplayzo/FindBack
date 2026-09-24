@@ -1,52 +1,79 @@
-﻿using OllamaSharp;
+﻿using FindBack.AiSpike;
+using Microsoft.Extensions.AI;
+using OllamaSharp;
 
-var ollama = new OllamaApiClient(
-    "http://localhost:11434",
-    "nomic-embed-text-v2-moe");
+const string modelName = "nomic-embed-text-v2-moe";
 
-var sentenceA =
-    "PostgreSQL est une base de données relationnelle.";
+IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator =
+    new OllamaApiClient(
+        new Uri("http://localhost:11434/"),
+        modelName);
 
-var sentenceB =
-    "J'utilise Postgres pour stocker les données de mon application.";
+var documentsDirectory = Path.Combine(
+    AppContext.BaseDirectory,
+    "documents");
 
-var sentenceC =
-    "Mon chat dort sur le canapé.";
-
-var embeddingA =
-    (await ollama.EmbedAsync(sentenceA)).Embeddings[0];
-
-var embeddingB =
-    (await ollama.EmbedAsync(sentenceB)).Embeddings[0];
-
-var embeddingC =
-    (await ollama.EmbedAsync(sentenceC)).Embeddings[0];
-
-Console.WriteLine(
-    $"A ↔ B : {CosineSimilarity(embeddingA, embeddingB):F4}");
-
-Console.WriteLine(
-    $"A ↔ C : {CosineSimilarity(embeddingA, embeddingC):F4}");
-
-static double CosineSimilarity(float[] a, float[] b)
+if (!Directory.Exists(documentsDirectory))
 {
-    if (a.Length != b.Length)
-        throw new ArgumentException("Vectors must have the same dimensions.");
+    Console.WriteLine(
+        $"Documents directory not found: {documentsDirectory}");
 
-    double dotProduct = 0;
-    double magnitudeA = 0;
-    double magnitudeB = 0;
+    return;
+}
 
-    for (int i = 0; i < a.Length; i++)
+var indexedDocuments = new List<IndexedDocument>();
+
+foreach (var filePath in Directory.EnumerateFiles(
+             documentsDirectory,
+             "*.txt"))
+{
+    var content = await File.ReadAllTextAsync(filePath);
+
+    var embedding =
+        await embeddingGenerator.GenerateVectorAsync(content);
+
+    indexedDocuments.Add(
+        new IndexedDocument(
+            Path.GetFileName(filePath),
+            content,
+            embedding.ToArray()));
+
+    Console.WriteLine(
+        $"Indexed: {Path.GetFileName(filePath)}");
+}
+
+Console.WriteLine();
+Console.Write("Search: ");
+
+var query = Console.ReadLine();
+
+if (string.IsNullOrWhiteSpace(query))
+{
+    Console.WriteLine("Search query cannot be empty");
+    return;
+}
+
+var queryEmbedding =
+    await embeddingGenerator.GenerateVectorAsync(query);
+
+var results = indexedDocuments
+    .Select(document => new
     {
-        dotProduct += a[i] * b[i];
-        magnitudeA += a[i] * a[i];
-        magnitudeB += b[i] * b[i];
-    }
+        Document = document,
 
-    if (magnitudeA == 0 || magnitudeB == 0)
-        return 0;
+        Score = VectorMath.CosineSimilarity(
+            queryEmbedding.Span,
+            document.Embedding)
+    })
+    .OrderByDescending(result => result.Score)
+    .ToList();
 
-    return dotProduct /
-           (Math.Sqrt(magnitudeA) * Math.Sqrt(magnitudeB));
+Console.WriteLine();
+Console.WriteLine("Results: ");
+Console.WriteLine();
+
+foreach (var result in results)
+{
+    Console.WriteLine(
+        $"{result.Score:F4} - {result.Document.FileName}");
 }

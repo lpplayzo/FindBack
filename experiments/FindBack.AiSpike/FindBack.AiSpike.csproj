@@ -10,5 +10,9 @@
   <ItemGroup>
     <PackageReference Include="OllamaSharp" Version="5.4.30" />
   </ItemGroup>
-
+  <ItemGroup>
+    <None Update="documents\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>

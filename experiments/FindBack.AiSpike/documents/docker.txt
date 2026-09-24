@@ -1,0 +1,5 @@
+Pour lancer PostgreSQL avec Docker, j'utilise l'image officielle postgres.
+
+Le conteneur expose le port 5432.
+
+La commande Docker permet de définir le mot de passe PostgreSQL avec la variable d'environnement POSTGRES_PASSWORD.

@@ -1,0 +1,5 @@
+ASP.NET Core permet de créer des API HTTP avec C# et .NET.
+
+L'injection de dépendances est intégrée au framework.
+
+Une application ASP.NET Core peut être déployée dans un conteneur Docker.
