@@ -3,77 +3,53 @@ using Microsoft.Extensions.AI;
 using OllamaSharp;
 
 const string modelName = "nomic-embed-text-v2-moe";
+const string searchQuery = "\"Comment lancer PostgreSQL avec Docker ?";
+
+
+string dataFilePath = Path.Combine(Directory.GetCurrentDirectory(), "documents");
+var filesPath = Directory.GetFiles(dataFilePath);
 
 IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator =
-    new OllamaApiClient(
-        new Uri("http://localhost:11434/"),
-        modelName);
+        new OllamaApiClient(
+            new Uri("http://localhost:11434/"),
+            modelName);
 
-var documentsDirectory = Path.Combine(
-    AppContext.BaseDirectory,
-    "documents");
+var queryEmbedding = await embeddingGenerator.GenerateVectorAsync(searchQuery);
 
-if (!Directory.Exists(documentsDirectory))
+var textChunker = new FixedSizeTextChunker(10, 1);
+var indexedChunks = new List<IndexedChunk>();
+var searchResults = new List<(IndexedChunk Chunk, double Score)>();
+
+
+List<IReadOnlyList<DocumentChunk>> res = new List<IReadOnlyList<DocumentChunk>>();
+
+foreach (var file in filesPath)
 {
-    Console.WriteLine(
-        $"Documents directory not found: {documentsDirectory}");
-
-    return;
+    var data = File.ReadAllText(file);
+    var fileName = Path.GetFileName(file);
+    res.Add(textChunker.Chunk(fileName, data));
 }
 
-var indexedDocuments = new List<IndexedDocument>();
-
-foreach (var filePath in Directory.EnumerateFiles(
-             documentsDirectory,
-             "*.txt"))
+foreach(var result in res)
 {
-    var content = await File.ReadAllTextAsync(filePath);
-
-    var embedding =
-        await embeddingGenerator.GenerateVectorAsync(content);
-
-    indexedDocuments.Add(
-        new IndexedDocument(
-            Path.GetFileName(filePath),
-            content,
-            embedding.ToArray()));
-
-    Console.WriteLine(
-        $"Indexed: {Path.GetFileName(filePath)}");
-}
-
-Console.WriteLine();
-Console.Write("Search: ");
-
-var query = Console.ReadLine();
-
-if (string.IsNullOrWhiteSpace(query))
-{
-    Console.WriteLine("Search query cannot be empty");
-    return;
-}
-
-var queryEmbedding =
-    await embeddingGenerator.GenerateVectorAsync(query);
-
-var results = indexedDocuments
-    .Select(document => new
+    if(result.Count > 0) Console.WriteLine(result.FirstOrDefault().DocumentName);
+    for (int i = 0; i < result.Count; i++)
     {
-        Document = document,
+        var embedding = await embeddingGenerator.GenerateVectorAsync(result[i].Content);
+        var indexedChunk = new IndexedChunk(result[i].DocumentName, result[i].Index, result[i].Content, embedding.ToArray());
+        indexedChunks.Add(indexedChunk);
+    }
+}
 
-        Score = VectorMath.CosineSimilarity(
-            queryEmbedding.Span,
-            document.Embedding)
-    })
-    .OrderByDescending(result => result.Score)
-    .ToList();
-
-Console.WriteLine();
-Console.WriteLine("Results: ");
-Console.WriteLine();
-
-foreach (var result in results)
+foreach (var chunk in indexedChunks)
 {
-    Console.WriteLine(
-        $"{result.Score:F4} - {result.Document.FileName}");
+    var similarity = VectorMath.CosineSimilarity(chunk.Embedding, queryEmbedding.Span);
+    searchResults.Add((chunk, similarity));
+}
+
+var orderedResults = searchResults.OrderByDescending(x => x.Score).Take(3);
+
+foreach (var res1 in orderedResults)
+{
+    Console.WriteLine($"Chunk {res1.Chunk.ChunkIndex} : Nom du fichier : {res1.Chunk.FileName} Score {res1.Score.ToString("F3")} Contenu : {res1.Chunk.Content}");
 }
