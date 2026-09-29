@@ -1,4 +1,6 @@
-﻿namespace FindBack.AiSpike
+﻿using FindBack.AiSpike.Models;
+
+namespace FindBack.AiSpike.Chunking
 {
     public interface ITextChunker
     {

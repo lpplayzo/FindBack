@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace FindBack.AiSpike
+namespace FindBack.AiSpike.Search
 {
     public static class VectorMath
     {

@@ -1,4 +1,4 @@
-﻿namespace FindBack.AiSpike
+﻿namespace FindBack.AiSpike.Models
 {
     public sealed record IndexedDocument(string FileName, string Content, float[] Embedding);
 

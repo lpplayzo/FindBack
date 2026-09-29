@@ -1,6 +1,8 @@
-﻿namespace FindBack.AiSpike.Tests;
+﻿using FindBack.AiSpike.Chunking;
 
-public class UnitTest1
+namespace FindBack.AiSpike.Tests.Chunking;
+
+public class FixedSizeTextChunkerTest
 {
 
     [Fact]
