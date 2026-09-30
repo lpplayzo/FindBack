@@ -1,17 +1,17 @@
-﻿using FindBack.AiSpike.Chunking;
+﻿using FindBack.AiSpike.AI;
+using FindBack.AiSpike.Chunking;
 using FindBack.AiSpike.Models;
-using Microsoft.Extensions.AI;
 
 namespace FindBack.AiSpike.Indexing
 {
     public class DocumentIndexer
     {
         private readonly ITextChunker _textChunker;
-        private readonly IEmbeddingGenerator<string, Embedding<float>> _embeddingGenerator;
-        public DocumentIndexer(ITextChunker textChunker, IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator)
+        private readonly IEmbeddingService _embeddingService;
+        public DocumentIndexer(ITextChunker textChunker, IEmbeddingService embeddingService)
         {
             _textChunker = textChunker;
-            _embeddingGenerator = embeddingGenerator;
+            _embeddingService = embeddingService;
         }
 
         public async Task<IReadOnlyList<IndexedChunk>> IndexDirectoryAsync(string directoryPath)
@@ -34,8 +34,8 @@ namespace FindBack.AiSpike.Indexing
             var chunks = _textChunker.Chunk(fileName, fileContent);
             foreach(var chunk in chunks)
             {
-                var embeddings = await _embeddingGenerator.GenerateVectorAsync(chunk.Content);
-                var indexedChunk = new IndexedChunk(chunk.DocumentName, chunk.Index, chunk.Content, embeddings.ToArray());
+                var embeddings = await _embeddingService.GenerateAsync(chunk.Content);
+                var indexedChunk = new IndexedChunk(chunk.DocumentName, chunk.Index, chunk.Content, embeddings);
                 result.Add(indexedChunk);
             }
             return result;

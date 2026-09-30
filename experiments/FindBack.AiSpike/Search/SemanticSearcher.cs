@@ -1,26 +1,26 @@
-﻿using FindBack.AiSpike.Models;
-using Microsoft.Extensions.AI;
+﻿using FindBack.AiSpike.AI;
+using FindBack.AiSpike.Models;
 
 namespace FindBack.AiSpike.Search
 {
     public class SemanticSearcher
     {
-        private readonly IEmbeddingGenerator<string, Embedding<float>> _embeddingGenerator;
+        private readonly IEmbeddingService _embeddingService;
         private readonly IReadOnlyList<IndexedChunk> _indexedChunks;
-        public SemanticSearcher(IReadOnlyList<IndexedChunk> indexedChunks, IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator)
+        public SemanticSearcher(IReadOnlyList<IndexedChunk> indexedChunks, IEmbeddingService embeddingService)
         {
             _indexedChunks = indexedChunks;
-            _embeddingGenerator = embeddingGenerator;
+            _embeddingService = embeddingService;
         }
 
         public async Task<IReadOnlyList<(IndexedChunk Chunk, double Score)>> SearchAsync(string query, int topK)
         {
             var result = new List<(IndexedChunk Chunk, double Score)>();
-            var queryEmbedding = await _embeddingGenerator.GenerateVectorAsync(query);
+            var queryEmbedding = await _embeddingService.GenerateAsync(query);
 
             foreach (var chunk in _indexedChunks)
             {
-                var similarity = VectorMath.CosineSimilarity(chunk.Embedding, queryEmbedding.Span);
+                var similarity = VectorMath.CosineSimilarity(chunk.Embedding, queryEmbedding);
                 result.Add((chunk, similarity));
             }
             var orderedResult = result.OrderByDescending(x => x.Score).Take(topK).ToList();
