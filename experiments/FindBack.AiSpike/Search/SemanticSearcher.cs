@@ -15,6 +15,7 @@ namespace FindBack.AiSpike.Search
 
         public async Task<IReadOnlyList<(IndexedChunk Chunk, double Score)>> SearchAsync(string query, int topK)
         {
+            ArgumentOutOfRangeException.ThrowIfLessThan(topK, 1);
             var result = new List<(IndexedChunk Chunk, double Score)>();
             var queryEmbedding = await _embeddingService.GenerateAsync(query);
 
