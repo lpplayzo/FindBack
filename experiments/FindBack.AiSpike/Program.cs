@@ -1,4 +1,4 @@
-﻿using FindBack.AiSpike;
+﻿using FindBack.AiSpike.AI;
 using FindBack.AiSpike.Chunking;
 using FindBack.AiSpike.Indexing;
 using FindBack.AiSpike.Search;
@@ -8,7 +8,6 @@ using OllamaSharp;
 const string modelName = "nomic-embed-text-v2-moe";
 const string searchQuery = "Comment lancer PostgreSQL avec Docker ?";
 
-
 string dataFilePath = Path.Combine(Directory.GetCurrentDirectory(), "documents");
 
 IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator =
@@ -16,11 +15,12 @@ IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator =
             new Uri("http://localhost:11434/"),
             modelName);
 
+MicrosoftEmbeddingService microsoftEmbeddingService = new(embeddingGenerator);
 
 var textChunker = new FixedSizeTextChunker(10, 1);
-var documentIndexer = new DocumentIndexer(textChunker, embeddingGenerator);
+var documentIndexer = new DocumentIndexer(textChunker, microsoftEmbeddingService);
 var indexedChunks = await documentIndexer.IndexDirectoryAsync(dataFilePath);
-var semanticSearcher = new SemanticSearcher(indexedChunks, embeddingGenerator);
+var semanticSearcher = new SemanticSearcher(indexedChunks, microsoftEmbeddingService);
 
 foreach (var res1 in await semanticSearcher.SearchAsync(searchQuery, 3))
 {

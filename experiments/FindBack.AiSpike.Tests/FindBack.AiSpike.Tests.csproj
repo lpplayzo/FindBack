@@ -22,8 +22,4 @@
     <ProjectReference Include="..\FindBack.AiSpike\FindBack.AiSpike.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Search\" />
-  </ItemGroup>
-
 </Project>
